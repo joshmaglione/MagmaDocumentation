@@ -154,6 +154,22 @@ def replace_ex_code(line):
         return "\\endcode\n"
     return line
 
+def replace_fields(line):
+    # We replace all instances of \mathbb{F}_q with \GF(q).
+    if "\\mathbb{F}_" in line:
+        i = line.index("\\mathbb{F}_")
+        j = line.index("_", i) + 1
+        if line[j].isdigit():
+            q = int(line[j])
+            k = j + 1
+        else:
+            assert line[j] == "{"
+            q, _ = get_betwen_cb(line, j)
+            k = line.index("}", j) + 1
+        return line[:i] + "\\GF(%s)" % (q) + replace_fields(line[k:])
+    return line
+    
+
 def replace_heading(line):
     # For some reason, we need to do something special for the introduction. So 
     # that is handled separately. Everything else seems to be the same. 
@@ -185,6 +201,10 @@ def replace_known_defs(line):
         "{\\mathbb Z}" : "\\Z", 
         "\\mathbb{Q}" : "\\Q",
         "{\\mathbb Q}" : "\\Q", 
+        "\\mathbb{R}" : "\\R",
+        "{\\mathbb R}" : "\\R", 
+        "\\mathbb{C}" : "\\C",
+        "{\\mathbb C}" : "\\C", 
         "\\mathrm{GL}" : "\\GL",
         "{\\mathrm GL}" : "\\GL",
         "\\mathrm{SL}" : "\\SL",
@@ -216,15 +236,11 @@ def replace_text_format(line):
         "\\textbf{" : "{\\bf ",
         "\\textsf{" : "{\\sf ",
         "\\texttt{" : "{\\tt ",
-        "\\textrm{" : "{\\rm ",
-        "\\mathrm{" : "{\\rm ",
-        "\\mathbb{" : "{\\bb ",
+        "\\textrm{" : "\\rm{",
+        "\\mathrm{" : "\\rm{",
         "\\mathcal{" : "{\\cal ",
-        "\\mathfrak{" : "{\\frak ",
-        "{\\mathrm " : "{\\rm ",
-        "{\\mathbb " : "{\\bb ",
-        "{\\mathcal " : "{\\cal ",
-        "{\\mathfrak " : "{\\frak "
+        "{\\mathrm " : "\\rm{",
+        "{\\mathcal " : "{\\cal "
     }
     for form in text_form.keys():
         line = line.replace(form, text_form[form])
@@ -297,6 +313,7 @@ local_funcs = [
     replace_boolean,
     replace_citation,
     replace_ex_code,
+    replace_fields,
     replace_heading,
     replace_known_defs,
     replace_magma,
@@ -317,7 +334,8 @@ print("Finished.\n")
 print("WARNING: Make sure not to use:")
 print("  - align environments,")
 print("  - \[ \] for math environments,")
-print("  - custom definitions.\n")
+print("  - custom definitions,")
+print("  - blackboard bold or fraktur fonts.\n")
 
 print("Writing to " + os.getcwd() + file_loc + "t.")
 with open(os.getcwd() + file_loc + "t", "w") as magma_file:
