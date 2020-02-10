@@ -226,8 +226,12 @@ def replace_known_defs(line):
 def replace_magma(line):
     magma_sl = "\\Magma\\"
     magma = "\\Magma"
-    newline = line.replace("Magma ", magma_sl).replace("magma ", magma_sl)
-    return newline.replace(" Magma", magma).replace(" magma", magma)
+    newline = line
+    if "Magma " in line or "magma " in line:
+        newline = newline.replace("Magma", magma_sl).replace("magma", magma_sl)
+    if " Magma" in newline or " magma" in newline:
+        newline = newline.replace("Magma", magma).replace("magma", magma)
+    return newline
 
 def replace_text_format(line):
     text_form = {
@@ -333,9 +337,11 @@ new_lines = delete_preamble_postamble(new_lines)
 print("Finished.\n")
 print("WARNING: Make sure not to use:")
 print("  - align environments,")
-print("  - \[ \] for math environments,")
+print("  - \\[ \\] for math environments,")
 print("  - custom definitions,")
-print("  - blackboard bold or fraktur fonts.\n")
+print("  - blackboard bold or fraktur fonts,")
+print("  - \\frac or \\dfrac commands,")
+print("  - array or matrix environments.\n")
 
 print("Writing to " + os.getcwd() + file_loc + "t.")
 with open(os.getcwd() + file_loc + "t", "w") as magma_file:
