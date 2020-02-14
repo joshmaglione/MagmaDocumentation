@@ -1,6 +1,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-#       A python 3 script to take documentation for Magma packages (in the 
-#   documentation.cls) and convert them to Magma's documentation style. 
+#       A python 3 script to take documentation for Magma packages (written in 
+#   the documentation.cls) and convert them to Magma's documentation style. 
+#   Further effort from the user is still required, but it is much smaller.
 #
 #                                                     Joshua Maglione CC BY 4.0 
 #                                                                     Feb. 2020
@@ -33,6 +34,20 @@ def remove_init_white_spc(s):
     if s[0] == " ":
         return remove_init_white_spc(s[1:])
     return s
+
+# Given a string line, an integer k, and a string s, return the line with all 
+# the substrings of line matching s replaced by appropriate versions of \s\. 
+def search_replace(line, k, s):
+    if k < len(line) and s in line[k:]:
+        i = line[k:].index(s)
+        if i > 0 and line[k + i - 1] == " ":
+            w = "\\" + s
+        if k + i + len(s) < len(line) and line[k + i + len(s)] == " ":
+            w += "\\" 
+        line = line[:k] + line[k:].replace(s, w, 1)
+        return search_replace(line, k + i + len(s) + 1, s)
+    else:
+        return line
 
 # A function that will deal with the signatures and descriptions. 
 def signature_description(lines):
@@ -113,15 +128,18 @@ def enum_item(lines):
 # always be a line. 
 
 def replace_boolean(line):
-    true_sl = "\\true\\"
-    true = "\\true"
-    false_sl = "\\false\\"
-    false = "\\false"
-    newline = line.replace(" true ", true_sl).replace(" True ", true_sl)
-    newline = newline.replace(" true", true).replace(" True", true)
-    newline = newline.replace(" false ", false_sl).replace(" False ", false_sl)
-    newline = newline.replace(" false", false).replace(" False", false)
-    return newline
+    new_line = line.replace("True", "true").replace("False", "false")
+    bool_map = {
+        "\\texttt{true}" : "true",
+        "{\\tt true}" : "true",
+        "\\texttt{false}" : "false",
+        "{\\tt false}" : "false"
+    }
+    for s in bool_map.keys():
+        new_line = new_line.replace(s, bool_map[s])
+    new_line = search_replace(new_line, 0, "true")
+    new_line = search_replace(new_line, 0, "false")
+    return new_line
 
 def replace_citation(line):
     # We have two forms of citations: 
@@ -159,11 +177,10 @@ def replace_fields(line):
     if "\\mathbb{F}_" in line:
         i = line.index("\\mathbb{F}_")
         j = line.index("_", i) + 1
-        if line[j].isdigit():
-            q = int(line[j])
+        if line[j] != "{":
+            q = line[j]
             k = j + 1
         else:
-            assert line[j] == "{"
             q, _ = get_betwen_cb(line, j)
             k = line.index("}", j) + 1
         return line[:i] + "\\GF(%s)" % (q) + replace_fields(line[k:])
@@ -224,13 +241,8 @@ def replace_known_defs(line):
     return line
 
 def replace_magma(line):
-    magma_sl = "\\Magma\\"
-    magma = "\\Magma"
-    newline = line
-    if "Magma " in line or "magma " in line:
-        newline = newline.replace("Magma", magma_sl).replace("magma", magma_sl)
-    if " Magma" in newline or " magma" in newline:
-        newline = newline.replace("Magma", magma).replace("magma", magma)
+    newline = line.replace("magma", "Magma").replace("MAGMA", "Magma")
+    newline = search_replace(newline, 0, "Magma")
     return newline
 
 def replace_text_format(line):
@@ -264,7 +276,10 @@ def delete_strings(line):
         "\\medskip",
         "\\bigskip",
         "\\backmatter",
-        "\\frontmatter"
+        "\\frontmatter",
+        "\\mainmatter",
+        "\\maketitle",
+        "\\tableofcontents"
     ]
     if any(map(lambda s: s in line, bad_strings)):
         return ""
@@ -341,7 +356,8 @@ print("  - \\[ \\] for math environments,")
 print("  - custom definitions,")
 print("  - blackboard bold or fraktur fonts,")
 print("  - \\frac or \\dfrac commands,")
-print("  - array or matrix environments.\n")
+print("  - array or matrix environments, or")
+print("  - any latex commands beyond the very basics.\n")
 
 print("Writing to " + os.getcwd() + file_loc + "t.")
 with open(os.getcwd() + file_loc + "t", "w") as magma_file:
